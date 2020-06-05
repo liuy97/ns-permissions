@@ -2,7 +2,7 @@ export function setDebug(debug:boolean)
 
 export type Status = 'authorized' | 'denied' | 'restricted' | 'undetermined';
 
-export enum AndroidPermissions {
+export const enum AndroidPermissions {
   READ_CALENDAR = 'android.permission.READ_CALENDAR',
   WRITE_CALENDAR = 'android.permission.WRITE_CALENDAR',
   CAMERA = 'android.permission.CAMERA',
@@ -27,7 +27,7 @@ export enum AndroidPermissions {
   RECEIVE_MMS = 'android.permission.RECEIVE_MMS',
   READ_EXTERNAL_STORAGE = 'android.permission.READ_EXTERNAL_STORAGE',
   WRITE_EXTERNAL_STORAGE = 'android.permission.WRITE_EXTERNAL_STORAGE'
-};
+}
 
 export type Permissions =
     'location'
@@ -70,6 +70,6 @@ export function check(permission: Permissions, options?: CheckOptions): Promise<
 export function hasPermission(permission: Permissions): boolean;
 
 export function request(permission: Permissions, options?: RequestOptions): Promise<[Status, boolean]>;
-export function requestPermissions(permissions: Permissions[]): Promise<{ [permission: string]: [Status, boolean] }>;
+export function requestPermissions(permissions: Permissions[]): Promise<{ [permission: string]: Status }>;
 
 export function checkPermissions(permissions: Permissions[]): Promise<{ [k: string]: string }>;

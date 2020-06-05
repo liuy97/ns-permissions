@@ -1,6 +1,6 @@
 import * as application from '@nativescript/core/application';
 import * as applicationSettings from '@nativescript/core/application-settings';
-import { CheckOptions, Rationale, RequestOptions, Status, Permissions } from './index';
+import { CheckOptions, Rationale, RequestOptions, Status, Permissions, AndroidPermissions } from './index';
 
 export * from './ns-permissions.common';
 
@@ -100,7 +100,7 @@ export namespace PermissionsAndroid {
      *
      * See https://facebook.github.io/react-native/docs/permissionsandroid.html#requestPermissions
      */
-    export function requestPermissions(permissions: string[]): Promise<{ [permission: string]: [Status, boolean] }> {
+    export function requestPermissions(permissions: string[]): Promise<{ [permission: string]: Status }> {
         return requestMultiplePermissions(permissions);
     }
 }
@@ -142,7 +142,7 @@ function requestPermission(permission: string): Promise<PermissionStatus> {
     });
 }
 
-function requestMultiplePermissions(permissions: string[]): Promise<{ [permission: string]: [Status, boolean] }> {
+function requestMultiplePermissions(permissions: string[]): Promise<{ [permission: string]: Status }> {
     const grantedPermissions = {};
     const permissionsToCheck = [];
     let checkedPermissionsCount = 0;
@@ -232,14 +232,10 @@ export function getTypes() {
     return Object.keys(permissionTypes);
 }
 
-export function check(permission: string, options?: CheckOptions): Promise<[Status, boolean]> {
-    if (!permissionTypes[permission]) {
-        console.warn(`ns-permissions ${permission} is not a valid permission type on Android`);
+export function check(aPermission: Permissions, options?: CheckOptions): Promise<[Status, boolean]> {
+    const permission = permissionTypes[aPermission] ? permissionTypes[aPermission] : aPermission.toString();
 
-        return Promise.resolve(['authorized', true]);
-    }
-
-    return PermissionsAndroid.check(permissionTypes[permission]).then(isAuthorized => {
+    return PermissionsAndroid.check(permission).then(isAuthorized => {
         if (isAuthorized) {
             return Promise.resolve(['authorized', true]);
         }
@@ -254,13 +250,15 @@ export function check(permission: string, options?: CheckOptions): Promise<[Stat
     });
 }
 
-export function hasPermission(permission: Permissions): boolean {
-    return PermissionsAndroid.hasPermission(permission.toString());
+export function hasPermission(aPermission: Permissions): boolean {
+    const permission = permissionTypes[aPermission] ? permissionTypes[aPermission] : aPermission.toString();
+    return PermissionsAndroid.hasPermission(permission);
 }
 
-export function request(permission: Permissions, options?: RequestOptions): Promise<[Status, boolean] | { [permission: string]: [Status, boolean] }> {
+export function request(aPermission: Permissions, options?: RequestOptions): Promise<[Status, boolean] | { [permission: string]: [Status, boolean] }> {
+    const permission = permissionTypes[aPermission] ? permissionTypes[aPermission] : aPermission.toString();
     const rationale = typeof options === 'string' ? undefined : options && options.rationale;
-    return PermissionsAndroid.request(permission.toString(), rationale).then(result => {
+    return PermissionsAndroid.request(permission, rationale).then(result => {
         // PermissionsAndroid.request() to native module resolves to boolean
         // rather than string if running on OS version prior to Android M
         if (typeof result === 'boolean') {
@@ -271,8 +269,8 @@ export function request(permission: Permissions, options?: RequestOptions): Prom
     });
 }
 
-export function requestPermissions(permissions: Permissions[]): Promise<{ [permission: string]: [Status, boolean] }> {
-    const requestPermissions = new Set<string>(permissions.map(p => p.toString()));
+export function requestPermissions(permissions: Permissions[]): Promise<{ [permission: string]: Status }> {
+    const requestPermissions = new Set<string>(permissions.map(p => permissionTypes[p] ? permissionTypes[p] : p.toString()));
     return requestMultiplePermissions(Array.from(requestPermissions));
 }
 

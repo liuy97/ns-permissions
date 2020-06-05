@@ -775,7 +775,7 @@ export function request(permission: string, options?: RequestOptions): Promise<[
     return PermissionsIOS.requestPermission(permission, type || DEFAULTS[permission]);
 }
 
-export function requestPermissions(permissions: string[]): Promise<{ [permission: string]: [Status, boolean] }> {
+export function requestPermissions(permissions: string[]): Promise<{ [permission: string]: Status }> {
     return Promise.all(permissions.map(permission => this.request(permission))).then((result: [PermissionsIOS.Status, boolean]) =>
         result.reduce((acc, value, index) => {
             const name = permissions[index];
