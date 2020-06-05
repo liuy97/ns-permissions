@@ -1,6 +1,6 @@
 import * as application from '@nativescript/core/application';
 import * as applicationSettings from '@nativescript/core/application-settings';
-import { CheckOptions, Rationale, RequestOptions, Status } from './index';
+import { CheckOptions, Rationale, RequestOptions, Status, Permissions } from './index';
 
 export * from './ns-permissions.common';
 
@@ -21,7 +21,7 @@ export const permissionTypes = {
         return android.Manifest.permission.READ_CALENDAR;
     },
     get storage() {
-        return [android.Manifest.permission.WRITE_EXTERNAL_STORAGE, android.Manifest.permission.READ_EXTERNAL_STORAGE];
+        return android.Manifest.permission.READ_EXTERNAL_STORAGE;
     },
     get photo() {
         return android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
@@ -50,41 +50,6 @@ export enum PermissionStatus {
 }
 
 export namespace PermissionsAndroid {
-    /**
-     * A list of specified "dangerous" permissions that require prompting the user
-     */
-    export const PERMISSIONS = {
-        READ_CALENDAR: 'android.permission.READ_CALENDAR',
-        WRITE_CALENDAR: 'android.permission.WRITE_CALENDAR',
-        CAMERA: 'android.permission.CAMERA',
-        READ_CONTACTS: 'android.permission.READ_CONTACTS',
-        WRITE_CONTACTS: 'android.permission.WRITE_CONTACTS',
-        GET_ACCOUNTS: 'android.permission.GET_ACCOUNTS',
-        ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION',
-        ACCESS_COARSE_LOCATION: 'android.permission.ACCESS_COARSE_LOCATION',
-        RECORD_AUDIO: 'android.permission.RECORD_AUDIO',
-        READ_PHONE_STATE: 'android.permission.READ_PHONE_STATE',
-        CALL_PHONE: 'android.permission.CALL_PHONE',
-        READ_CALL_LOG: 'android.permission.READ_CALL_LOG',
-        WRITE_CALL_LOG: 'android.permission.WRITE_CALL_LOG',
-        ADD_VOICEMAIL: 'com.android.voicemail.permission.ADD_VOICEMAIL',
-        USE_SIP: 'android.permission.USE_SIP',
-        PROCESS_OUTGOING_CALLS: 'android.permission.PROCESS_OUTGOING_CALLS',
-        BODY_SENSORS: 'android.permission.BODY_SENSORS',
-        SEND_SMS: 'android.permission.SEND_SMS',
-        RECEIVE_SMS: 'android.permission.RECEIVE_SMS',
-        READ_SMS: 'android.permission.READ_SMS',
-        RECEIVE_WAP_PUSH: 'android.permission.RECEIVE_WAP_PUSH',
-        RECEIVE_MMS: 'android.permission.RECEIVE_MMS',
-        READ_EXTERNAL_STORAGE: 'android.permission.READ_EXTERNAL_STORAGE',
-        WRITE_EXTERNAL_STORAGE: 'android.permission.WRITE_EXTERNAL_STORAGE'
-    };
-
-    export const RESULTS = {
-        GRANTED: 'authorized',
-        DENIED: 'denied',
-        NEVER_ASK_AGAIN: 'never_ask_again'
-    };
 
     /**
      * Returns a promise resolving to a boolean value as to whether the specified
@@ -133,14 +98,12 @@ export namespace PermissionsAndroid {
      * returns an object with the permissions as keys and strings as values
      * indicating whether the user allowed or denied the request
      *
-     * See https://facebook.github.io/react-native/docs/permissionsandroid.html#requestmultiple
+     * See https://facebook.github.io/react-native/docs/permissionsandroid.html#requestPermissions
      */
-    export function requestMultiple(permissions: string[]): Promise<{ [permission: string]: [Status, boolean] }> {
+    export function requestPermissions(permissions: string[]): Promise<{ [permission: string]: [Status, boolean] }> {
         return requestMultiplePermissions(permissions);
     }
 }
-
-// PermissionsAndroid = new PermissionsAndroid();
 
 let mRequestCode = 0;
 function requestPermission(permission: string): Promise<PermissionStatus> {
@@ -271,8 +234,7 @@ export function getTypes() {
 
 export function check(permission: string, options?: CheckOptions): Promise<[Status, boolean]> {
     if (!permissionTypes[permission]) {
-        console.warn(`nativescript-perms: ${permission} is not a valid permission type on Android`);
-        // const error = new Error(`nativescript-perms: ${permission} is not a valid permission type on Android`);
+        console.warn(`ns-permissions ${permission} is not a valid permission type on Android`);
 
         return Promise.resolve(['authorized', true]);
     }
@@ -292,23 +254,13 @@ export function check(permission: string, options?: CheckOptions): Promise<[Stat
     });
 }
 
-export function hasPermission(permission: string): boolean {
-    return PermissionsAndroid.hasPermission(permission);
+export function hasPermission(permission: Permissions): boolean {
+    return PermissionsAndroid.hasPermission(permission.toString());
 }
 
-export function request(permission: string, options?: RequestOptions): Promise<[Status, boolean] | { [permission: string]: [Status, boolean] }> {
-    const types = permissionTypes[permission];
-    if (!types) {
-        const error = new Error(`nativescript-perms: ${permission} is not a valid permission type on Android`);
-
-        return Promise.reject(error);
-    }
-
+export function request(permission: Permissions, options?: RequestOptions): Promise<[Status, boolean] | { [permission: string]: [Status, boolean] }> {
     const rationale = typeof options === 'string' ? undefined : options && options.rationale;
-    if (Array.isArray(types)) {
-        return requestMultiplePermissions(types);
-    }
-    return PermissionsAndroid.request(types, rationale).then(result => {
+    return PermissionsAndroid.request(permission.toString(), rationale).then(result => {
         // PermissionsAndroid.request() to native module resolves to boolean
         // rather than string if running on OS version prior to Android M
         if (typeof result === 'boolean') {
@@ -319,20 +271,13 @@ export function request(permission: string, options?: RequestOptions): Promise<[
     });
 }
 
-export function requestMultiple(permissions: string[]): Promise<{ [permission: string]: [Status, boolean] }> {
-    const exists = permissions == null || permissions.filter(permission => Object.keys(PermissionsAndroid.PERMISSIONS)
-        .find(key => PermissionsAndroid.PERMISSIONS[key] === permission) == null).length > 0;
-    if (exists) {
-        const error = new Error(`nativescript-perms: ${permissions} is not a valid permission type on Android`);
-
-        return Promise.reject(error);
-    }
-
-    return requestMultiplePermissions(permissions);
+export function requestPermissions(permissions: Permissions[]): Promise<{ [permission: string]: [Status, boolean] }> {
+    const requestPermissions = new Set<string>(permissions.map(p => p.toString()));
+    return requestMultiplePermissions(Array.from(requestPermissions));
 }
 
-export function checkMultiple(permissions: string[]) {
-    return Promise.all(permissions.map(permission => this.check(permission))).then(result =>
+export function checkPermissions(permissions: Permissions[]): Promise<{ [k: string]: string }> {
+    return Promise.all(permissions.map(permission => check(permission))).then(result =>
         result.reduce((acc, value, index) => {
             const name = permissions[index];
             acc[name] = value;

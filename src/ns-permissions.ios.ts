@@ -1,4 +1,4 @@
-import { CheckOptions, RequestOptions } from './index';
+import { CheckOptions, RequestOptions, Status } from './index';
 import { CLog, CLogTypes } from './ns-permissions.common';
 export * from './ns-permissions.common';
 
@@ -547,7 +547,7 @@ export namespace PermissionsIOS {
     }
     export function getPermissionStatus(type, json): Promise<[Status, boolean]> {
         let status: [Status, boolean];
-        CLog(CLogTypes.info, `nativescript-perms: getPermissionStatus ${type} ${json}`);
+        CLog(CLogTypes.info, `ns-permissions getPermissionStatus ${type} ${json}`);
 
         switch (type) {
             case NSType.Location: {
@@ -597,8 +597,62 @@ export namespace PermissionsIOS {
 
         return Promise.resolve(status);
     }
+
+    export function getPermissionStatusSync(type, json): boolean {
+        let status: [Status, boolean];
+        CLog(CLogTypes.info, `ns-permissions getPermissionStatus ${type} ${json}`);
+
+        switch (type) {
+            case NSType.Location: {
+                // NSString *locationPermissionType = [RCTConvert NSString:json];
+                status = NSPLocation.getStatusForType(json);
+                break;
+            }
+            case NSType.Camera:
+                status = NSPAudioVideo.getStatus('video');
+                break;
+            case NSType.Microphone:
+                status = NSPAudioVideo.getStatus('audio');
+                break;
+            case NSType.Photo:
+                status = NSPPhoto.getStatus();
+                break;
+            case NSType.Contacts:
+                status = NSPContacts.getStatus();
+                break;
+            case NSType.Event:
+                status = NSPEvent.getStatus('event');
+                break;
+            case NSType.Reminder:
+                status = NSPEvent.getStatus('reminder');
+                break;
+            case NSType.Bluetooth:
+                status = NSPBluetooth.getStatus();
+                break;
+            case NSType.Notification:
+                status = NSPNotification.getStatus();
+                break;
+            case NSType.BackgroundRefresh:
+                status = NSPBackgroundRefresh.getStatus();
+                break;
+            case NSType.NSPTypeSpeechRecognition:
+                status = NSPSpeechRecognition.getStatus();
+                break;
+            case NSType.MediaLibrary:
+                status = NSPMediaLibrary.getStatus();
+                break;
+            case NSType.Motion:
+                status = NSPMotion.getStatus();
+                break;
+            default:
+                break;
+        }
+
+        return status && status[1];
+    }
+
     export function requestPermission(type, json): Promise<[Status, boolean]> {
-        CLog(CLogTypes.info, `nativescript-perms: requestPermission ${type} ${json}`);
+        CLog(CLogTypes.info, `ns-permissions requestPermission ${type} ${json}`);
         switch (type) {
             case NSType.Location:
                 return NSPLocation.request(json);
@@ -660,14 +714,27 @@ export function getTypes() {
     return permissionTypes;
 }
 
-export function check(permission: string, options?: CheckOptions): Promise<[PermissionsIOS.Status, boolean]> {
-    CLog(CLogTypes.info, `nativescript-perms: check ${permission} ${options}`);
+export function hasPermission(permission: string): boolean {
+    CLog(CLogTypes.info, `nativescript-perms: check ${permission}`);
     if (permissionTypes.indexOf(permission) === -1) {
         // const error = new Error(`ReactNativePermissions: ${permission} is not a valid permission type on iOS`);
 
         // return Promise.reject(error);
         CLog(CLogTypes.warning, `nativescript-perms: ${permission} is not a valid permission type on iOS`);
         // const error = new Error(`nativescript-perms: ${permission} is not a valid permission type on Android`);
+
+        return true;
+    }
+
+
+    return PermissionsIOS.getPermissionStatusSync(permission, DEFAULTS[permission]);
+}
+
+export function check(permission: string, options?: CheckOptions): Promise<[PermissionsIOS.Status, boolean]> {
+    CLog(CLogTypes.info, `ns-permissions check ${permission} ${options}`);
+    if (permissionTypes.indexOf(permission) === -1) {
+
+        CLog(CLogTypes.warning, `ns-permissions ${permission} is not a valid permission type on iOS`);
 
         return Promise.resolve([PermissionsIOS.Status.Authorized, true]);
     }
@@ -684,21 +751,20 @@ export function check(permission: string, options?: CheckOptions): Promise<[Perm
 }
 
 export function request(permission: string, options?: RequestOptions): Promise<[PermissionsIOS.Status, boolean]> {
-    CLog(CLogTypes.info, `nativescript-perms: request ${permission} ${options}`);
+    CLog(CLogTypes.info, `ns-permissions request ${permission} ${options}`);
     if (permissionTypes.indexOf(permission) === -1) {
-        // const error = new Error(`ReactNativePermissions: ${permission} is not a valid permission type on iOS`);
-        CLog(CLogTypes.warning, `nativescript-perms: ${permission} is not a valid permission type on iOS`);
+        CLog(CLogTypes.warning, `ns-permissions ${permission} is not a valid permission type on iOS`);
 
         return Promise.resolve([PermissionsIOS.Status.Authorized, true]);
     }
 
     if (permission === 'backgroundRefresh') {
-        const error = new Error('nativescript-perms: You cannot request backgroundRefresh');
+        const error = new Error('ns-permissions You cannot request backgroundRefresh');
 
         return Promise.reject(error);
     }
 
-    let type;
+    let type: any;
 
     if (typeof options === 'string') {
         type = options;
@@ -709,8 +775,18 @@ export function request(permission: string, options?: RequestOptions): Promise<[
     return PermissionsIOS.requestPermission(permission, type || DEFAULTS[permission]);
 }
 
-export function checkMultiple(permissions: string[]) {
-    return Promise.all(permissions.map(permission => this.check(permission))).then(result =>
+export function requestPermissions(permissions: string[]): Promise<{ [permission: string]: [Status, boolean] }> {
+    return Promise.all(permissions.map(permission => this.request(permission))).then((result: [PermissionsIOS.Status, boolean]) =>
+        result.reduce((acc, value, index) => {
+            const name = permissions[index];
+            acc[name] = value;
+            return acc;
+        }, {})
+    );
+}
+
+export function checkPermissions(permissions: string[]) {
+    return Promise.all(permissions.map(permission => check(permission))).then(result =>
         result.reduce((acc, value, index) => {
             const name = permissions[index];
             acc[name] = value;
