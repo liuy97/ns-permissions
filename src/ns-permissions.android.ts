@@ -242,7 +242,7 @@ export function check(aPermission: Permissions, options?: CheckOptions): Promise
 
         return getDidAskOnce(permission).then(didAsk => {
             if (didAsk) {
-                return shouldShowRequestPermissionRationale(permissionTypes[permission]).then(shouldShow => [shouldShow ? 'denied' : 'restricted', true]);
+                return shouldShowRequestPermissionRationale(permission).then(shouldShow => [shouldShow ? 'denied' : 'restricted', true]);
             }
 
             return Promise.resolve(['undetermined', true]);
