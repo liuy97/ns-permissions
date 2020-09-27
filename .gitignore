@@ -6,6 +6,8 @@
 *.js.map
 *.log
 src/*.d.ts
+dist
+!jest.config.js
 !src/index.d.ts
 !src/references.d.ts
 !src/scripts/*.js

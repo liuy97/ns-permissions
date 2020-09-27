@@ -1,0 +1,35 @@
+{
+  "name": "ns-permissions",
+  "version": "2.0.1",
+  "description": "Add a plugin description",
+  "main": "index",
+  "typings": "index.d.ts",
+  "nativescript": {
+    "platforms": {
+      "ios": "6.0.0",
+      "android": "6.0.0"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liuy97/ns-permissions.git"
+  },
+  "keywords": [
+    "NativeScript",
+    "Permissions",
+    "TypeScript",
+    "Android",
+    "iOS"
+  ],
+  "author": {
+    "name": "Yong Liu",
+    "email": "liuy97@gmail.com"
+  },
+  "bugs": {
+    "url": "https://github.com/liuy97/ns-permissions/issues"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/liuy97/ns-permissions",
+  "readmeFilename": "README.md",
+  "bootstrapper": "@nativescript/plugin-seed"
+}
